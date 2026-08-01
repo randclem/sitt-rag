@@ -1,0 +1,35 @@
+[project]
+name = "sitt-rag"
+version = "0.1.0"
+description = "Something in the Trees RAG — MCP server for cryptid lore retrieval"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.32",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.3",
+    "chromadb>=0.5",
+    "voyageai>=0.3",
+    "mcp>=1.2",
+    "tiktoken>=0.8",
+    "python-dotenv>=1.0",
+]
+
+[project.scripts]
+sitt-rag-update = "sitt_rag.update:main"
+sitt-rag-server = "sitt_rag.server:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-mock>=3.14",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sitt_rag"]
