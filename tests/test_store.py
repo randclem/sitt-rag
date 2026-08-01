@@ -50,6 +50,62 @@ def test_add_article_with_no_aliases(tmp_path):
     assert store.articles.count() == 1
 
 
+def test_get_article_resolves_by_canonical_name_case_insensitively(tmp_path):
+    store = Store(data_dir=tmp_path)
+    store.reset()
+    source = Source(title="Jersey Devil", url="https://en.wikipedia.org/wiki/Jersey_Devil", license="CC BY-SA 4.0")
+    store.add_article(
+        cryptid_name="Jersey Devil",
+        category="North America",
+        source=source,
+        full_text="## Lead\n\nThe Jersey Devil is a legendary creature.",
+        aliases=["Leeds Devil"],
+    )
+
+    exact = store.get_article("Jersey Devil")
+    lowercased = store.get_article("jersey devil")
+
+    assert exact is not None
+    assert exact.name == "Jersey Devil"
+    assert exact.text == "## Lead\n\nThe Jersey Devil is a legendary creature."
+    assert exact.source.title == "Jersey Devil"
+    assert lowercased is not None
+    assert lowercased.name == "Jersey Devil"
+
+
+def test_get_article_resolves_by_alias(tmp_path):
+    store = Store(data_dir=tmp_path)
+    store.reset()
+    source = Source(title="Jersey Devil", url="https://en.wikipedia.org/wiki/Jersey_Devil", license="CC BY-SA 4.0")
+    store.add_article(
+        cryptid_name="Jersey Devil",
+        category="North America",
+        source=source,
+        full_text="## Lead\n\nThe Jersey Devil is a legendary creature.",
+        aliases=["Leeds Devil"],
+    )
+
+    result = store.get_article("leeds devil")
+
+    assert result is not None
+    assert result.name == "Jersey Devil"
+
+
+def test_get_article_returns_none_when_not_found(tmp_path):
+    store = Store(data_dir=tmp_path)
+    store.reset()
+    source = Source(title="Jersey Devil", url="https://en.wikipedia.org/wiki/Jersey_Devil", license="CC BY-SA 4.0")
+    store.add_article(
+        cryptid_name="Jersey Devil",
+        category="North America",
+        source=source,
+        full_text="## Lead\n\nThe Jersey Devil is a legendary creature.",
+        aliases=["Leeds Devil"],
+    )
+
+    assert store.get_article("Mothman") is None
+
+
 def test_reset_clears_previous_data(tmp_path):
     store = Store(data_dir=tmp_path)
     store.reset()

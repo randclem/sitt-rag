@@ -70,6 +70,31 @@ def search_cryptid_lore(query: str, top_k: int = 5) -> list[dict] | dict:
     ]
 
 
+@mcp.tool()
+def get_cryptid(name: str) -> dict:
+    """Look up a cryptid's full article by canonical name or known alias (case-insensitive).
+
+    Returns {name, text, source: {title, url, license}}, or a `not_found` error
+    if `name` doesn't resolve to any ingested cryptid.
+    """
+    if not name or not name.strip():
+        return _error("invalid_argument", "name must be a non-empty string")
+
+    try:
+        article = _get_store().get_article(name)
+    except Exception as exc:
+        return _error("lookup_failed", str(exc))
+
+    if article is None:
+        return _error("not_found", f"No cryptid found matching '{name}'")
+
+    return {
+        "name": article.name,
+        "text": article.text,
+        "source": {"title": article.source.title, "url": article.source.url, "license": article.source.license},
+    }
+
+
 def main() -> None:
     mcp.run()
 

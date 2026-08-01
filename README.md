@@ -28,9 +28,14 @@ This is a full rebuild on every run — no diffing/dedup yet (deferred to a late
 uv run python -m sitt_rag.server
 ```
 
-Exposes one tool: `search_cryptid_lore(query, top_k=5)`, backed by the `chunks`
-collection. `top_k` is silently clamped to 20; there is no score threshold. Errors are
-returned as `{"error": {"code", "message"}}` rather than raised.
+Exposes two tools, both returning errors as `{"error": {"code", "message"}}` rather than
+raising:
+
+- `search_cryptid_lore(query, top_k=5)` — semantic search over the `chunks` collection.
+  `top_k` is silently clamped to 20; there is no score threshold.
+- `get_cryptid(name)` — full article lookup from the `articles` collection. Resolves
+  `name` case-insensitively against the canonical title, then against known aliases
+  (Wikipedia redirects). Unknown names return a `not_found` error.
 
 ## Tests
 

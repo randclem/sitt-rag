@@ -29,6 +29,13 @@ class SearchResult:
     source: Source
 
 
+@dataclass
+class ArticleResult:
+    name: str
+    text: str
+    source: Source
+
+
 class Store:
     def __init__(self, data_dir=DATA_DIR):
         data_dir.mkdir(parents=True, exist_ok=True)
@@ -99,6 +106,36 @@ class Store:
         if aliases:
             metadata["aliases"] = aliases
         self.articles.add(ids=[cryptid_name], documents=[full_text], metadatas=[metadata])
+
+    def get_article(self, name: str) -> ArticleResult | None:
+        """Resolve `name` case-insensitively against canonical title, then alias."""
+        result = self.articles.get(include=["documents", "metadatas"])
+        ids = result["ids"]
+        documents = result["documents"]
+        metadatas = result["metadatas"]
+        target = name.strip().lower()
+
+        for cryptid_name, document, metadata in zip(ids, documents, metadatas):
+            if cryptid_name.lower() == target:
+                return self._to_article_result(cryptid_name, document, metadata)
+
+        for cryptid_name, document, metadata in zip(ids, documents, metadatas):
+            aliases = metadata.get("aliases") or []
+            if any(alias.lower() == target for alias in aliases):
+                return self._to_article_result(cryptid_name, document, metadata)
+
+        return None
+
+    def _to_article_result(self, cryptid_name: str, document: str, metadata: dict) -> ArticleResult:
+        return ArticleResult(
+            name=cryptid_name,
+            text=document,
+            source=Source(
+                title=metadata["source_title"],
+                url=metadata["source_url"],
+                license=metadata["source_license"],
+            ),
+        )
 
     def search(self, query_embedding: list[float], top_k: int) -> list[SearchResult]:
         result = self.chunks.query(query_embeddings=[query_embedding], n_results=top_k)
