@@ -36,6 +36,12 @@ class ArticleResult:
     source: Source
 
 
+@dataclass
+class CryptidSummary:
+    name: str
+    category: str
+
+
 class Store:
     def __init__(self, data_dir=DATA_DIR):
         data_dir.mkdir(parents=True, exist_ok=True)
@@ -136,6 +142,33 @@ class Store:
                 license=metadata["source_license"],
             ),
         )
+
+    def _all_cryptid_summaries(self) -> list[CryptidSummary]:
+        result = self.articles.get(include=["metadatas"])
+        return [
+            CryptidSummary(name=cryptid_name, category=metadata["category"])
+            for cryptid_name, metadata in zip(result["ids"], result["metadatas"])
+        ]
+
+    def list_categories(self) -> list[str]:
+        """Return the sorted, deduplicated set of categories present in ingested articles."""
+        return sorted({summary.category for summary in self._all_cryptid_summaries()})
+
+    def list_cryptids(self, category: str | None = None) -> list[CryptidSummary] | None:
+        """Return every ingested cryptid's {name, category}, sorted by name.
+
+        `category` filters case-insensitively; a blank/omitted category returns the
+        full list. An unrecognized category returns `None` (consistent with
+        `get_article`'s not-found signal).
+        """
+        summaries = self._all_cryptid_summaries()
+        if category is not None and category.strip():
+            target = category.strip().lower()
+            summaries = [s for s in summaries if s.category.lower() == target]
+            if not summaries:
+                return None
+        summaries.sort(key=lambda s: s.name)
+        return summaries
 
     def search(self, query_embedding: list[float], top_k: int) -> list[SearchResult]:
         result = self.chunks.query(query_embeddings=[query_embedding], n_results=top_k)

@@ -1,4 +1,4 @@
-from sitt_rag.store import Source, Store
+from sitt_rag.store import CryptidSummary, Source, Store
 
 
 def test_add_chunks_and_search_roundtrip(tmp_path):
@@ -104,6 +104,62 @@ def test_get_article_returns_none_when_not_found(tmp_path):
     )
 
     assert store.get_article("Mothman") is None
+
+
+def test_list_categories_returns_sorted_unique_categories(tmp_path):
+    store = Store(data_dir=tmp_path)
+    store.reset()
+    source = Source(title="X", url="https://example.com", license="CC BY-SA 4.0")
+    store.add_article(cryptid_name="Bunyip", category="Australia", source=source, full_text="t", aliases=[])
+    store.add_article(cryptid_name="Jersey Devil", category="North America", source=source, full_text="t", aliases=[])
+    store.add_article(cryptid_name="Yowie", category="Australia", source=source, full_text="t", aliases=[])
+
+    assert store.list_categories() == ["Australia", "North America"]
+
+
+def test_list_cryptids_returns_all_entries_sorted_by_name(tmp_path):
+    store = Store(data_dir=tmp_path)
+    store.reset()
+    source = Source(title="X", url="https://example.com", license="CC BY-SA 4.0")
+    store.add_article(cryptid_name="Yowie", category="Australia", source=source, full_text="t", aliases=[])
+    store.add_article(cryptid_name="Bunyip", category="Australia", source=source, full_text="t", aliases=[])
+
+    entries = store.list_cryptids()
+
+    assert entries == [
+        CryptidSummary(name="Bunyip", category="Australia"),
+        CryptidSummary(name="Yowie", category="Australia"),
+    ]
+
+
+def test_list_cryptids_filters_by_category_case_insensitively(tmp_path):
+    store = Store(data_dir=tmp_path)
+    store.reset()
+    source = Source(title="X", url="https://example.com", license="CC BY-SA 4.0")
+    store.add_article(cryptid_name="Bunyip", category="Australia", source=source, full_text="t", aliases=[])
+    store.add_article(cryptid_name="Jersey Devil", category="North America", source=source, full_text="t", aliases=[])
+
+    entries = store.list_cryptids(category="australia")
+
+    assert entries == [CryptidSummary(name="Bunyip", category="Australia")]
+
+
+def test_list_cryptids_returns_none_for_unknown_category(tmp_path):
+    store = Store(data_dir=tmp_path)
+    store.reset()
+    source = Source(title="X", url="https://example.com", license="CC BY-SA 4.0")
+    store.add_article(cryptid_name="Bunyip", category="Australia", source=source, full_text="t", aliases=[])
+
+    assert store.list_cryptids(category="not a real category") is None
+
+
+def test_list_cryptids_treats_blank_category_as_no_filter(tmp_path):
+    store = Store(data_dir=tmp_path)
+    store.reset()
+    source = Source(title="X", url="https://example.com", license="CC BY-SA 4.0")
+    store.add_article(cryptid_name="Bunyip", category="Australia", source=source, full_text="t", aliases=[])
+
+    assert store.list_cryptids(category="  ") == [CryptidSummary(name="Bunyip", category="Australia")]
 
 
 def test_reset_clears_previous_data(tmp_path):

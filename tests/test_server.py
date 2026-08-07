@@ -1,5 +1,5 @@
 from sitt_rag import server
-from sitt_rag.store import ArticleResult, SearchResult, Source
+from sitt_rag.store import ArticleResult, CryptidSummary, SearchResult, Source
 
 
 class FakeEmbedder:
@@ -29,6 +29,21 @@ class FakeStore:
                 ),
             )
         return None
+
+    def list_categories(self):
+        return ["Australia", "North America"]
+
+    def list_cryptids(self, category=None):
+        summaries = [
+            CryptidSummary(name="Bunyip", category="Australia"),
+            CryptidSummary(name="Jersey Devil", category="North America"),
+        ]
+        if category is not None and category.strip():
+            target = category.strip().lower()
+            summaries = [s for s in summaries if s.category.lower() == target]
+            if not summaries:
+                return None
+        return summaries
 
 
 def test_search_cryptid_lore_returns_ranked_results(monkeypatch):
@@ -105,5 +120,76 @@ def test_get_cryptid_returns_error_envelope_when_lookup_fails(monkeypatch):
     monkeypatch.setattr(server, "_get_store", lambda: FailingStore())
 
     result = server.get_cryptid("Jersey Devil")
+
+    assert result["error"]["code"] == "lookup_failed"
+
+
+def test_list_categories_returns_categories(monkeypatch):
+    monkeypatch.setattr(server, "_get_store", lambda: FakeStore())
+
+    assert server.list_categories() == ["Australia", "North America"]
+
+
+def test_list_categories_returns_error_envelope_when_lookup_fails(monkeypatch):
+    class FailingStore:
+        def list_categories(self):
+            raise RuntimeError("db down")
+
+    monkeypatch.setattr(server, "_get_store", lambda: FailingStore())
+
+    result = server.list_categories()
+
+    assert result["error"]["code"] == "lookup_failed"
+
+
+def test_list_cryptids_returns_full_list_by_default(monkeypatch):
+    monkeypatch.setattr(server, "_get_store", lambda: FakeStore())
+
+    result = server.list_cryptids()
+
+    assert result == [
+        {"name": "Bunyip", "category": "Australia"},
+        {"name": "Jersey Devil", "category": "North America"},
+    ]
+
+
+def test_list_cryptids_filters_by_category_case_insensitively(monkeypatch):
+    monkeypatch.setattr(server, "_get_store", lambda: FakeStore())
+
+    result = server.list_cryptids(category="australia")
+
+    assert result == [{"name": "Bunyip", "category": "Australia"}]
+
+
+def test_list_cryptids_returns_not_found_for_unknown_category(monkeypatch):
+    monkeypatch.setattr(server, "_get_store", lambda: FakeStore())
+
+    result = server.list_cryptids(category="not a real category")
+
+    assert result["error"]["code"] == "not_found"
+
+
+def test_list_cryptids_treats_blank_category_as_no_filter(monkeypatch):
+    monkeypatch.setattr(server, "_get_store", lambda: FakeStore())
+
+    result = server.list_cryptids(category="   ")
+
+    assert result == [
+        {"name": "Bunyip", "category": "Australia"},
+        {"name": "Jersey Devil", "category": "North America"},
+    ]
+
+
+def test_list_cryptids_returns_error_envelope_when_lookup_fails(monkeypatch):
+    class FailingStore:
+        def list_categories(self):
+            raise RuntimeError("db down")
+
+        def list_cryptids(self, category=None):
+            raise RuntimeError("db down")
+
+    monkeypatch.setattr(server, "_get_store", lambda: FailingStore())
+
+    result = server.list_cryptids()
 
     assert result["error"]["code"] == "lookup_failed"

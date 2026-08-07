@@ -95,6 +95,34 @@ def get_cryptid(name: str) -> dict:
     }
 
 
+@mcp.tool()
+def list_categories() -> list[str] | dict:
+    """List the taxonomy categories captured at ingest (e.g. "North America", "Africa")."""
+    try:
+        return _get_store().list_categories()
+    except Exception as exc:
+        return _error("lookup_failed", str(exc))
+
+
+@mcp.tool()
+def list_cryptids(category: str | None = None) -> list[dict] | dict:
+    """List ingested cryptids as [{name, category}, ...].
+
+    Omit `category` for the full list; otherwise filters to that category
+    (case-insensitive). Returns a `not_found` error if `category` doesn't match
+    any ingested category.
+    """
+    try:
+        summaries = _get_store().list_cryptids(category=category)
+    except Exception as exc:
+        return _error("lookup_failed", str(exc))
+
+    if summaries is None:
+        return _error("not_found", f"No category found matching '{category}'")
+
+    return [{"name": s.name, "category": s.category} for s in summaries]
+
+
 def main() -> None:
     mcp.run()
 
