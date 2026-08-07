@@ -8,6 +8,18 @@ class FakeEmbedder:
         return [[1.0, 0.0] for _ in texts]
 
 
+class CountingEmbedder:
+    """Like FakeEmbedder, but tracks how many times it was asked to embed —
+    used to assert unchanged articles never reach the embedder."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        self.calls += 1
+        return [[1.0, 0.0] for _ in texts]
+
+
 def _bunyip_ref() -> CryptidRef:
     return CryptidRef(name="Bunyip", category="Australia", wikipedia_title="Bunyip")
 
@@ -73,6 +85,24 @@ def test_run_with_no_changes_reports_unchanged_and_makes_no_writes(tmp_path, mon
     assert "Bunyip" in out  # names are printed per bucket, not just counts
     assert store.chunks.count() == 1
     assert store.articles.count() == 1
+
+
+def test_run_with_no_changes_does_not_call_embedder(tmp_path, monkeypatch, capsys):
+    store = Store(data_dir=tmp_path)
+    store.reset()
+    _seed_bunyip(store, "The bunyip lurks in swamps.")
+
+    _wikipedia_fakes(
+        monkeypatch,
+        taxonomy=[_bunyip_ref()],
+        articles_by_title={"Bunyip": _article("The bunyip lurks in swamps.")},
+    )
+    monkeypatch.setattr("builtins.input", lambda *a: (_ for _ in ()).throw(AssertionError("should not prompt")))
+
+    embedder = CountingEmbedder()
+    update.run(store=store, embedder=embedder)
+
+    assert embedder.calls == 0
 
 
 def test_run_detects_changed_article_and_reinserts(tmp_path, monkeypatch, capsys):
