@@ -101,6 +101,7 @@ class Store:
         source: Source,
         full_text: str,
         aliases: list[str],
+        content_hash: str = "",
     ) -> None:
         metadata = {
             "cryptid_name": cryptid_name,
@@ -108,10 +109,24 @@ class Store:
             "source_title": source.title,
             "source_url": source.url,
             "source_license": source.license,
+            "content_hash": content_hash,
         }
         if aliases:
             metadata["aliases"] = aliases
         self.articles.add(ids=[cryptid_name], documents=[full_text], metadatas=[metadata])
+
+    def get_stored_hashes(self) -> dict[str, str]:
+        """Return {cryptid_name: content_hash} for every ingested article, for diffing."""
+        result = self.articles.get(include=["metadatas"])
+        return {
+            cryptid_name: metadata.get("content_hash", "")
+            for cryptid_name, metadata in zip(result["ids"], result["metadatas"])
+        }
+
+    def delete_cryptid(self, cryptid_name: str) -> None:
+        """Hard-delete a cryptid's chunks and article row. No-ops if not present."""
+        self.chunks.delete(where={"cryptid_name": cryptid_name})
+        self.articles.delete(ids=[cryptid_name])
 
     def get_article(self, name: str) -> ArticleResult | None:
         """Resolve `name` case-insensitively against canonical title, then alias."""

@@ -162,6 +162,70 @@ def test_list_cryptids_treats_blank_category_as_no_filter(tmp_path):
     assert store.list_cryptids(category="  ") == [CryptidSummary(name="Bunyip", category="Australia")]
 
 
+def test_add_article_stores_content_hash_and_get_stored_hashes_returns_it(tmp_path):
+    store = Store(data_dir=tmp_path)
+    store.reset()
+    source = Source(title="Bunyip", url="https://en.wikipedia.org/wiki/Bunyip", license="CC BY-SA 4.0")
+
+    store.add_article(
+        cryptid_name="Bunyip", category="Australia", source=source, full_text="t", aliases=[], content_hash="abc123"
+    )
+
+    assert store.get_stored_hashes() == {"Bunyip": "abc123"}
+
+
+def test_get_stored_hashes_returns_empty_dict_when_no_articles(tmp_path):
+    store = Store(data_dir=tmp_path)
+    store.reset()
+
+    assert store.get_stored_hashes() == {}
+
+
+def test_delete_cryptid_removes_chunks_and_article(tmp_path):
+    store = Store(data_dir=tmp_path)
+    store.reset()
+    source = Source(title="Bunyip", url="https://en.wikipedia.org/wiki/Bunyip", license="CC BY-SA 4.0")
+    store.add_chunks(
+        cryptid_name="Bunyip",
+        category="Australia",
+        source=source,
+        chunk_texts=["text"],
+        chunk_sections=["Lead"],
+        chunk_indices=[0],
+        embeddings=[[1.0, 0.0]],
+    )
+    store.add_article(
+        cryptid_name="Bunyip", category="Australia", source=source, full_text="t", aliases=[], content_hash="abc123"
+    )
+    store.add_chunks(
+        cryptid_name="Yowie",
+        category="Australia",
+        source=source,
+        chunk_texts=["other text"],
+        chunk_sections=["Lead"],
+        chunk_indices=[0],
+        embeddings=[[0.0, 1.0]],
+    )
+    store.add_article(
+        cryptid_name="Yowie", category="Australia", source=source, full_text="t2", aliases=[], content_hash="def456"
+    )
+
+    store.delete_cryptid("Bunyip")
+
+    assert store.get_stored_hashes() == {"Yowie": "def456"}
+    remaining_chunks = store.chunks.get(include=["metadatas"])
+    assert [m["cryptid_name"] for m in remaining_chunks["metadatas"]] == ["Yowie"]
+
+
+def test_delete_cryptid_is_a_noop_when_not_present(tmp_path):
+    store = Store(data_dir=tmp_path)
+    store.reset()
+
+    store.delete_cryptid("Nonexistent")  # should not raise
+
+    assert store.get_stored_hashes() == {}
+
+
 def test_reset_clears_previous_data(tmp_path):
     store = Store(data_dir=tmp_path)
     store.reset()
