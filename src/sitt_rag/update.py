@@ -2,6 +2,10 @@
 already stored, fetch only what's added or changed, hard-delete what's gone, and
 require a `[y/N]` confirmation before writing anything.
 
+A cryptid whose article can't be fetched or parsed lands in a `failed` bucket
+instead of aborting the run: it's excluded from this run's commit, its existing
+rows are left in place, and it reappears in the same bucket on the next run.
+
 Usage: python -m sitt_rag.update
 """
 
@@ -16,6 +20,10 @@ from sitt_rag.config import CC_BY_SA_LICENSE, WIKIPEDIA_ORIGIN
 from sitt_rag.embeddings import EmbeddingError, VoyageEmbedder
 from sitt_rag.store import Source, Store
 from sitt_rag.wikipedia import Article, CryptidRef, WikipediaError, fetch_article, fetch_redirects, fetch_taxonomy
+
+
+def article_url(title: str) -> str:
+    return f"{WIKIPEDIA_ORIGIN}/wiki/{title.replace(' ', '_')}"
 
 
 def full_text_for(article: Article) -> str:
@@ -38,15 +46,21 @@ class _Fetched:
     content_hash: str
 
 
-def _fetch(ref: CryptidRef) -> _Fetched | None:
-    """Fetch and hash one cryptid's article. Returns None (and prints) on failure —
-    the run continues, leaving any existing stored data for it untouched."""
+@dataclass
+class _Failure:
+    cryptid_name: str
+    url: str
+    error: str
+
+
+def _fetch(ref: CryptidRef) -> _Fetched | _Failure:
+    """Fetch and hash one cryptid's article, returning a `_Failure` rather than raising —
+    the run continues, leaving any existing stored data for this cryptid untouched."""
     try:
         article = fetch_article(ref.wikipedia_title)
         aliases = fetch_redirects(ref.wikipedia_title)
     except WikipediaError as exc:
-        print(f"SKIPPED ({ref.name}): {exc}")
-        return None
+        return _Failure(cryptid_name=ref.name, url=article_url(ref.wikipedia_title), error=str(exc))
     text = full_text_for(article)
     return _Fetched(ref=ref, article=article, aliases=aliases, full_text=text, content_hash=content_hash(text))
 
@@ -55,7 +69,7 @@ def _insert(store: Store, embedder: VoyageEmbedder, fetched: _Fetched) -> None:
     ref = fetched.ref
     source = Source(
         title=fetched.article.title,
-        url=f"{WIKIPEDIA_ORIGIN}/wiki/{fetched.article.title.replace(' ', '_')}",
+        url=article_url(fetched.article.title),
         license=CC_BY_SA_LICENSE,
     )
     chunks = chunk_article(fetched.article)
@@ -86,6 +100,15 @@ def _print_bucket(label: str, names: list[str]) -> None:
         print(f"  {name}")
 
 
+def _report_failures(failures: list[_Failure]) -> None:
+    """Print every fetch failure from this run, with the URL and reason for each."""
+    if not failures:
+        return
+    print(f"\n{len(failures)} cryptid(s) failed to fetch and were left untouched:")
+    for failure in failures:
+        print(f"  {failure.cryptid_name} ({failure.url}): {failure.error}")
+
+
 def run(store: Store | None = None, embedder: VoyageEmbedder | None = None) -> None:
     store = store or Store()
     embedder = embedder or VoyageEmbedder()
@@ -105,10 +128,14 @@ def run(store: Store | None = None, embedder: VoyageEmbedder | None = None) -> N
     fetched_by_name: dict[str, _Fetched] = {}
     changed_names: list[str] = []
     unchanged_names: list[str] = []
+    failures: list[_Failure] = []
 
+    # Change detection needs the article's full text in hand to hash it, so fetch
+    # failures surface here, during the dry run, and are excluded from this run's commit.
     for name in added_names + candidate_names:
         fetched = _fetch(taxonomy_by_name[name])
-        if fetched is None:
+        if isinstance(fetched, _Failure):
+            failures.append(fetched)
             continue
         if name in stored_hashes and fetched.content_hash == stored_hashes[name]:
             unchanged_names.append(name)
@@ -123,14 +150,17 @@ def run(store: Store | None = None, embedder: VoyageEmbedder | None = None) -> N
     _print_bucket("Changed", changed_names)
     _print_bucket("Removed", removed_names)
     _print_bucket("Unchanged", unchanged_names)
+    _print_bucket("Failed", [failure.cryptid_name for failure in failures])
 
     if not added_names and not changed_names and not removed_names:
         print("\nNothing to do.")
+        _report_failures(failures)
         return
 
     answer = input("\nProceed? [y/N] ").strip().lower()
     if answer != "y":
         print("Aborted.")
+        _report_failures(failures)
         return
 
     for name in added_names + changed_names:
@@ -139,12 +169,16 @@ def run(store: Store | None = None, embedder: VoyageEmbedder | None = None) -> N
         store.delete_cryptid(name)
 
     print(f"Done. {len(added_names)} added, {len(changed_names)} changed, {len(removed_names)} removed.")
+    _report_failures(failures)
 
 
 def main() -> None:
     try:
         run()
-    except EmbeddingError as exc:
+    except (EmbeddingError, WikipediaError) as exc:
+        # Per-cryptid fetch failures are absorbed into the failed bucket; a
+        # WikipediaError reaching here means the taxonomy itself is unreachable,
+        # so there's nothing to diff against.
         print(f"error: {exc}", file=sys.stderr)
         sys.exit(1)
 

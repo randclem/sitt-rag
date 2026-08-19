@@ -28,8 +28,8 @@ def _yowie_ref() -> CryptidRef:
     return CryptidRef(name="Yowie", category="Australia", wikipedia_title="Yowie")
 
 
-def _article(text: str) -> Article:
-    return Article(title="Bunyip", sections=[Section(title="Lead", paragraphs=[text])])
+def _article(text: str, title: str = "Bunyip") -> Article:
+    return Article(title=title, sections=[Section(title="Lead", paragraphs=[text])])
 
 
 def _seed_bunyip(store: Store, text: str) -> str:
@@ -244,3 +244,57 @@ def test_run_skips_candidate_fetch_failures_without_aborting(tmp_path, monkeypat
 
     # last-known-good data untouched
     assert store.get_stored_hashes()["Bunyip"] == old_hash
+
+
+def test_run_reports_failed_bucket_and_leaves_existing_rows_intact(tmp_path, monkeypatch, capsys):
+    store = Store(data_dir=tmp_path)
+    store.reset()
+    old_hash = _seed_bunyip(store, "The bunyip lurks in swamps.")
+
+    def failing_fetch(title):
+        raise update.WikipediaError("404 Not Found")
+
+    monkeypatch.setattr(update, "fetch_taxonomy", lambda: [_bunyip_ref()])
+    monkeypatch.setattr(update, "fetch_article", failing_fetch)
+    monkeypatch.setattr(update, "fetch_redirects", lambda title: [])
+    monkeypatch.setattr("builtins.input", lambda *a: (_ for _ in ()).throw(AssertionError("should not prompt")))
+
+    update.run(store=store, embedder=FakeEmbedder())
+
+    out = capsys.readouterr().out
+    assert "Failed: 1" in out
+    assert "https://en.wikipedia.org/wiki/Bunyip" in out
+    assert "404 Not Found" in out
+
+    # a failed refetch must not delete the cryptid's last-known-good rows
+    assert store.get_stored_hashes()["Bunyip"] == old_hash
+    assert store.chunks.count() == 1
+    assert store.articles.count() == 1
+
+
+def test_run_continues_past_a_failure_and_ingests_the_rest(tmp_path, monkeypatch, capsys):
+    store = Store(data_dir=tmp_path)
+    store.reset()
+
+    articles_by_title = {"Yowie": _article("The yowie roams the outback.", title="Yowie")}
+
+    def sometimes_failing_fetch(title):
+        if title not in articles_by_title:
+            raise update.WikipediaError("connection failed after 3 retries")
+        return articles_by_title[title]
+
+    monkeypatch.setattr(update, "fetch_taxonomy", lambda: [_bunyip_ref(), _yowie_ref()])
+    monkeypatch.setattr(update, "fetch_article", sometimes_failing_fetch)
+    monkeypatch.setattr(update, "fetch_redirects", lambda title: [])
+    monkeypatch.setattr("builtins.input", lambda *a: "y")
+
+    update.run(store=store, embedder=FakeEmbedder())
+
+    out = capsys.readouterr().out
+    assert "Added: 1" in out
+    assert "Failed: 1" in out
+    assert set(store.get_stored_hashes()) == {"Yowie"}
+
+    # the surviving cryptid is attributed to its own article, not the failed one's
+    stored = store.articles.get(ids=["Yowie"], include=["metadatas"])
+    assert stored["metadatas"][0]["source_url"] == "https://en.wikipedia.org/wiki/Yowie"
