@@ -5,12 +5,24 @@ from Wikipedia's REST HTML API and action API.
 from __future__ import annotations
 
 import re
+import time
 from dataclasses import dataclass, field
 
 import requests
 from bs4 import BeautifulSoup
 
 from sitt_rag.config import LIST_OF_CRYPTIDS_TITLE, USER_AGENT, WIKIPEDIA_ORIGIN
+
+# Transient failures are worth another try: rate-limiting and server-side errors.
+# Everything else (404s, redirect loops, unparseable prose) is terminal on the
+# first attempt — retrying it just burns wall-clock time on a run of ~1000 articles.
+TRANSIENT_STATUSES = frozenset({429, 500, 502, 503, 504})
+MAX_RETRIES = 3
+
+
+def backoff_seconds(attempt: int) -> int:
+    """Seconds to wait before retrying after a failed `attempt` (0-based): 1s, 2s, 4s, ..."""
+    return 2**attempt
 
 SKIPPED_SECTION_TITLES = {
     "see also",
@@ -50,9 +62,28 @@ class WikipediaError(Exception):
 
 
 def _get(url: str, params: dict | None = None) -> requests.Response:
-    resp = requests.get(url, params=params, headers=_HEADERS, timeout=30)
-    resp.raise_for_status()
-    return resp
+    """GET `url`, retrying transient failures with exponential backoff.
+
+    Timeouts, connection errors, and `TRANSIENT_STATUSES` responses are retried
+    up to `MAX_RETRIES` times, sleeping 1s/2s/4s in between. Permanent failures
+    — 4xx other than rate-limiting, redirect loops — raise on the first attempt.
+    """
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            resp = requests.get(url, params=params, headers=_HEADERS, timeout=30)
+        except (requests.Timeout, requests.ConnectionError) as exc:
+            retriable: Exception = exc
+        else:
+            if resp.status_code not in TRANSIENT_STATUSES:
+                resp.raise_for_status()  # permanent HTTP failure, or a clean response
+                return resp
+            retriable = requests.HTTPError(f"status {resp.status_code}", response=resp)
+
+        if attempt == MAX_RETRIES:
+            raise retriable
+        time.sleep(backoff_seconds(attempt))
+
+    raise AssertionError("unreachable")  # pragma: no cover
 
 
 def fetch_taxonomy() -> list[CryptidRef]:
@@ -61,7 +92,11 @@ def fetch_taxonomy() -> list[CryptidRef]:
     Categories are the h3 headings under the "List" section; each category's table
     has a "Name" column whose first cell links to the cryptid's own article.
     """
-    resp = _get(f"{WIKIPEDIA_ORIGIN}/api/rest_v1/page/html/{LIST_OF_CRYPTIDS_TITLE}")
+    try:
+        resp = _get(f"{WIKIPEDIA_ORIGIN}/api/rest_v1/page/html/{LIST_OF_CRYPTIDS_TITLE}")
+    except requests.RequestException as exc:
+        raise WikipediaError(f"failed to fetch the cryptid taxonomy: {exc}") from exc
+
     soup = BeautifulSoup(resp.text, "lxml")
 
     refs: list[CryptidRef] = []
@@ -104,7 +139,7 @@ def fetch_article(title: str) -> Article:
     """
     try:
         resp = _get(f"{WIKIPEDIA_ORIGIN}/api/rest_v1/page/html/{title}")
-    except requests.HTTPError as exc:
+    except requests.RequestException as exc:
         raise WikipediaError(f"failed to fetch article {title!r}: {exc}") from exc
 
     soup = BeautifulSoup(resp.text, "lxml")
@@ -139,17 +174,23 @@ def fetch_article(title: str) -> Article:
 
 def fetch_redirects(title: str) -> list[str]:
     """Fetch alias titles (redirects) pointing at this article via the action API."""
-    resp = _get(
-        f"{WIKIPEDIA_ORIGIN}/w/api.php",
-        params={
-            "action": "query",
-            "titles": title,
-            "prop": "redirects",
-            "rdlimit": 500,
-            "format": "json",
-        },
-    )
-    data = resp.json()
+    try:
+        resp = _get(
+            f"{WIKIPEDIA_ORIGIN}/w/api.php",
+            params={
+                "action": "query",
+                "titles": title,
+                "prop": "redirects",
+                "rdlimit": 500,
+                "format": "json",
+            },
+        )
+        data = resp.json()
+    except requests.RequestException as exc:
+        raise WikipediaError(f"failed to fetch redirects for {title!r}: {exc}") from exc
+    except ValueError as exc:  # a 200 carrying something that isn't JSON
+        raise WikipediaError(f"redirects response for {title!r} was not JSON: {exc}") from exc
+
     pages = data.get("query", {}).get("pages", {})
     aliases: list[str] = []
     for page in pages.values():
