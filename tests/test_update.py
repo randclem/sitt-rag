@@ -298,3 +298,33 @@ def test_run_continues_past_a_failure_and_ingests_the_rest(tmp_path, monkeypatch
     # the surviving cryptid is attributed to its own article, not the failed one's
     stored = store.articles.get(ids=["Yowie"], include=["metadatas"])
     assert stored["metadatas"][0]["source_url"] == "https://en.wikipedia.org/wiki/Yowie"
+
+
+def test_main_runs_eval_after_the_update_when_the_flag_is_passed(monkeypatch):
+    calls: list[str] = []
+    monkeypatch.setattr(update, "run", lambda: calls.append("update") or True)
+    monkeypatch.setattr("sitt_rag.eval.run", lambda *args, **kwargs: calls.append("eval"))
+
+    update.main(["--eval"])
+
+    assert calls == ["update", "eval"]
+
+
+def test_main_does_not_run_eval_without_the_flag(monkeypatch):
+    calls: list[str] = []
+    monkeypatch.setattr(update, "run", lambda: calls.append("update") or True)
+    monkeypatch.setattr("sitt_rag.eval.run", lambda *args, **kwargs: calls.append("eval"))
+
+    update.main([])
+
+    assert calls == ["update"]
+
+
+def test_main_skips_eval_when_the_update_was_declined(monkeypatch):
+    calls: list[str] = []
+    monkeypatch.setattr(update, "run", lambda: calls.append("update") or False)
+    monkeypatch.setattr("sitt_rag.eval.run", lambda *args, **kwargs: calls.append("eval"))
+
+    update.main(["--eval"])
+
+    assert calls == ["update"]

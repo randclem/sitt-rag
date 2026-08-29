@@ -1,0 +1,350 @@
+{
+  "mechanical": [
+    {
+      "query": "Tell me about Anguila peluda",
+      "expected": [
+        "Anguila peluda"
+      ]
+    },
+    {
+      "query": "Tell me about Beast of Busco",
+      "expected": [
+        "Beast of Busco"
+      ]
+    },
+    {
+      "query": "Tell me about British big cats",
+      "expected": [
+        "British big cats"
+      ]
+    },
+    {
+      "query": "Tell me about Bunyip",
+      "expected": [
+        "Bunyip"
+      ]
+    },
+    {
+      "query": "Tell me about Cadborosaurus",
+      "expected": [
+        "Cadborosaurus"
+      ]
+    },
+    {
+      "query": "Tell me about Champ",
+      "expected": [
+        "Champ"
+      ]
+    },
+    {
+      "query": "Tell me about Chupacabra",
+      "expected": [
+        "Chupacabra"
+      ]
+    },
+    {
+      "query": "Tell me about Cryptid whales",
+      "expected": [
+        "Cryptid whales"
+      ]
+    },
+    {
+      "query": "Tell me about Dobhar-chú",
+      "expected": [
+        "Dobhar-chú"
+      ]
+    },
+    {
+      "query": "Tell me about Dover Demon",
+      "expected": [
+        "Dover Demon"
+      ]
+    },
+    {
+      "query": "Tell me about Flatwoods monster",
+      "expected": [
+        "Flatwoods monster"
+      ]
+    },
+    {
+      "query": "Tell me about Fresno nightcrawler",
+      "expected": [
+        "Fresno nightcrawler"
+      ]
+    },
+    {
+      "query": "Tell me about Gloucester sea serpent",
+      "expected": [
+        "Gloucester sea serpent"
+      ]
+    },
+    {
+      "query": "Tell me about Goatman",
+      "expected": [
+        "Goatman"
+      ]
+    },
+    {
+      "query": "Tell me about Grafton monster",
+      "expected": [
+        "Grafton monster"
+      ]
+    },
+    {
+      "query": "Tell me about Ground Shark",
+      "expected": [
+        "Ground Shark"
+      ]
+    },
+    {
+      "query": "Tell me about Iemisch",
+      "expected": [
+        "Iemisch"
+      ]
+    },
+    {
+      "query": "Tell me about Igopogo",
+      "expected": [
+        "Igopogo"
+      ]
+    },
+    {
+      "query": "Tell me about Jersey Devil",
+      "expected": [
+        "Jersey Devil"
+      ]
+    },
+    {
+      "query": "Tell me about Katanga Snake",
+      "expected": [
+        "Katanga Snake"
+      ]
+    },
+    {
+      "query": "Tell me about Kongamato",
+      "expected": [
+        "Kongamato"
+      ]
+    },
+    {
+      "query": "Tell me about Labynkyr Devil",
+      "expected": [
+        "Labynkyr Devil"
+      ]
+    },
+    {
+      "query": "Tell me about Lizard Man of Scape Ore Swamp",
+      "expected": [
+        "Lizard Man of Scape Ore Swamp"
+      ]
+    },
+    {
+      "query": "Tell me about Loch Ness Monster",
+      "expected": [
+        "Loch Ness Monster"
+      ]
+    },
+    {
+      "query": "Tell me about Loveland Frog",
+      "expected": [
+        "Loveland Frog"
+      ]
+    },
+    {
+      "query": "Tell me about Manipogo",
+      "expected": [
+        "Manipogo"
+      ]
+    },
+    {
+      "query": "Tell me about Mbielu-mbielu-mbielu",
+      "expected": [
+        "Mbielu-mbielu-mbielu"
+      ]
+    },
+    {
+      "query": "Tell me about Megalodon (surviving populations)",
+      "expected": [
+        "Megalodon (surviving populations)"
+      ]
+    },
+    {
+      "query": "Tell me about Mermaid",
+      "expected": [
+        "Mermaid"
+      ]
+    },
+    {
+      "query": "Tell me about Michigan Dogman",
+      "expected": [
+        "Michigan Dogman"
+      ]
+    },
+    {
+      "query": "Tell me about Moa (surviving original populations)",
+      "expected": [
+        "Moa (surviving original populations)"
+      ]
+    },
+    {
+      "query": "Tell me about Mokele-mbembe",
+      "expected": [
+        "Mokele-mbembe"
+      ]
+    },
+    {
+      "query": "Tell me about Mongolian death worm",
+      "expected": [
+        "Mongolian death worm"
+      ]
+    },
+    {
+      "query": "Tell me about Montauk Monster",
+      "expected": [
+        "Montauk Monster"
+      ]
+    },
+    {
+      "query": "Tell me about Morgawr",
+      "expected": [
+        "Morgawr"
+      ]
+    },
+    {
+      "query": "Tell me about Mothman",
+      "expected": [
+        "Mothman"
+      ]
+    },
+    {
+      "query": "Tell me about Nandi bear",
+      "expected": [
+        "Nandi bear"
+      ]
+    },
+    {
+      "query": "Tell me about Ogopogo",
+      "expected": [
+        "Ogopogo"
+      ]
+    },
+    {
+      "query": "Tell me about Phantom kangaroo",
+      "expected": [
+        "Phantom kangaroo"
+      ]
+    },
+    {
+      "query": "Tell me about Queensland Tiger",
+      "expected": [
+        "Queensland Tiger"
+      ]
+    },
+    {
+      "query": "Tell me about Sea serpents",
+      "expected": [
+        "Sea serpents"
+      ]
+    },
+    {
+      "query": "Tell me about Selma",
+      "expected": [
+        "Selma"
+      ]
+    },
+    {
+      "query": "Tell me about Steller's sea ape",
+      "expected": [
+        "Steller's sea ape"
+      ]
+    },
+    {
+      "query": "Tell me about Storsjö monster",
+      "expected": [
+        "Storsjö monster"
+      ]
+    },
+    {
+      "query": "Tell me about Thylacine (surviving original populations)",
+      "expected": [
+        "Thylacine (surviving original populations)"
+      ]
+    }
+  ],
+  "thematic": [
+    {
+      "query": "lake monsters of Scotland",
+      "expected": [
+        "Loch Ness Monster"
+      ]
+    },
+    {
+      "query": "monsters said to live in Canadian lakes",
+      "expected": [
+        "Ogopogo",
+        "Manipogo",
+        "Igopogo"
+      ]
+    },
+    {
+      "query": "Scandinavian lake creature folklore",
+      "expected": [
+        "Selma",
+        "Storsjö monster"
+      ]
+    },
+    {
+      "query": "sea serpents sighted from ships in the 1800s",
+      "expected": [
+        "Gloucester sea serpent",
+        "Sea serpents",
+        "Morgawr",
+        "Cadborosaurus"
+      ]
+    },
+    {
+      "query": "living dinosaurs reported in the Congo",
+      "expected": [
+        "Mokele-mbembe",
+        "Mbielu-mbielu-mbielu",
+        "Kongamato"
+      ]
+    },
+    {
+      "query": "winged humanoid seen as an omen of disaster",
+      "expected": [
+        "Mothman",
+        "Jersey Devil"
+      ]
+    },
+    {
+      "query": "creature blamed for draining livestock of blood",
+      "expected": [
+        "Chupacabra"
+      ]
+    },
+    {
+      "query": "animals declared extinct that people still report seeing",
+      "expected": [
+        "Thylacine (surviving original populations)",
+        "Moa (surviving original populations)",
+        "Megalodon (surviving populations)",
+        "Queensland Tiger"
+      ]
+    },
+    {
+      "query": "out-of-place animals sighted in the British countryside",
+      "expected": [
+        "British big cats",
+        "Phantom kangaroo"
+      ]
+    },
+    {
+      "query": "reptilian humanoids in North American swamps",
+      "expected": [
+        "Lizard Man of Scape Ore Swamp",
+        "Loveland Frog"
+      ]
+    }
+  ]
+}
