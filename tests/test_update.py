@@ -1,6 +1,8 @@
+import pytest
+
 from sitt_rag import update
 from sitt_rag.store import Source, Store
-from sitt_rag.wikipedia import Article, CryptidRef, Section
+from sitt_rag.wikipedia import Article, CryptidRef, Section, WikipediaError
 
 
 class FakeEmbedder:
@@ -57,6 +59,30 @@ def _seed_bunyip(store: Store, text: str) -> str:
         content_hash=content_hash,
     )
     return content_hash
+
+
+def _seed_cryptid(store: Store, name: str, text: str) -> None:
+    """Seed one stored cryptid the way `update.run` would, for corpus-size guards."""
+    article = _article(text, title=name)
+    full_text = update.full_text_for(article)
+    source = Source(title=name, url=f"https://en.wikipedia.org/wiki/{name}", license="CC BY-SA 4.0")
+    store.add_chunks(
+        cryptid_name=name,
+        category="Australia",
+        source=source,
+        chunk_texts=[text],
+        chunk_sections=["Lead"],
+        chunk_indices=[0],
+        embeddings=[[1.0, 0.0]],
+    )
+    store.add_article(
+        cryptid_name=name,
+        category="Australia",
+        source=source,
+        full_text=full_text,
+        aliases=[],
+        content_hash=update.content_hash(full_text),
+    )
 
 
 def _wikipedia_fakes(monkeypatch, taxonomy, articles_by_title, redirects_by_title=None):
@@ -167,19 +193,26 @@ def test_run_ingests_new_cryptid_via_fresh_insert_path(tmp_path, monkeypatch, ca
 
 
 def test_run_hard_deletes_cryptid_removed_from_taxonomy(tmp_path, monkeypatch, capsys):
+    """A genuine, proportionate delisting still commits on a plain [y/N]."""
     store = Store(data_dir=tmp_path)
     store.reset()
-    _seed_bunyip(store, "The bunyip lurks in swamps.")
+    for name in ("Bunyip", "Yowie", "Champ", "Selma"):
+        _seed_cryptid(store, name, f"The {name} lurks in swamps.")
 
-    _wikipedia_fakes(monkeypatch, taxonomy=[], articles_by_title={})
+    kept = [CryptidRef(name=n, category="Australia", wikipedia_title=n) for n in ("Bunyip", "Yowie", "Champ")]
+    _wikipedia_fakes(
+        monkeypatch,
+        taxonomy=kept,
+        articles_by_title={n: _article(f"The {n} lurks in swamps.", title=n) for n in ("Bunyip", "Yowie", "Champ")},
+    )
     monkeypatch.setattr("builtins.input", lambda *a: "y")
 
     update.run(store=store, embedder=FakeEmbedder())
 
     out = capsys.readouterr().out
     assert "Removed: 1" in out
-    assert store.chunks.count() == 0
-    assert store.articles.count() == 0
+    assert store.articles.count() == 3
+    assert store.get_article("Selma") is None
 
 
 def test_run_handles_added_changed_removed_and_unchanged_together(tmp_path, monkeypatch, capsys):
@@ -213,7 +246,9 @@ def test_run_handles_added_changed_removed_and_unchanged_together(tmp_path, monk
             "Yowie": _article("The yowie roams the outback."),  # added
         },
     )
-    monkeypatch.setattr("builtins.input", lambda *a: "y")
+    # Removing 1 of 2 stored cryptids is over MASS_REMOVAL_FRACTION, so this run
+    # answers the strict prompt with the count rather than a bare "y".
+    monkeypatch.setattr("builtins.input", lambda *a: "1")
 
     update.run(store=store, embedder=FakeEmbedder())
 
@@ -328,3 +363,65 @@ def test_main_skips_eval_when_the_update_was_declined(monkeypatch):
     update.main(["--eval"])
 
     assert calls == ["update"]
+
+
+def test_run_refuses_an_empty_taxonomy_instead_of_proposing_mass_deletion(tmp_path, monkeypatch, capsys):
+    """An unparseable-but-HTTP-200 list page must never reach the delete path.
+
+    `fetch_taxonomy` guards this at the source, but `run` refuses independently:
+    there is no legitimate state in which the page lists zero cryptids.
+    """
+    store = Store(data_dir=tmp_path)
+    store.reset()
+    _seed_bunyip(store, "The bunyip lurks in swamps.")
+
+    _wikipedia_fakes(monkeypatch, taxonomy=[], articles_by_title={})
+    monkeypatch.setattr("builtins.input", lambda *a: (_ for _ in ()).throw(AssertionError("should not prompt")))
+
+    with pytest.raises(WikipediaError, match="no cryptids"):
+        update.run(store=store, embedder=FakeEmbedder())
+
+    assert store.articles.count() == 1
+    assert store.chunks.count() == 1
+
+
+def test_run_rejects_a_mass_removal_confirmed_only_with_y(tmp_path, monkeypatch, capsys):
+    store = Store(data_dir=tmp_path)
+    store.reset()
+    for name in ("Bunyip", "Yowie", "Champ", "Selma"):
+        _seed_cryptid(store, name, f"The {name} lurks in swamps.")
+
+    _wikipedia_fakes(
+        monkeypatch,
+        taxonomy=[_bunyip_ref()],
+        articles_by_title={"Bunyip": _article("The Bunyip lurks in swamps.", title="Bunyip")},
+    )
+    monkeypatch.setattr("builtins.input", lambda *a: "y")
+
+    update.run(store=store, embedder=FakeEmbedder())
+
+    out = capsys.readouterr().out
+    # The failure mode is named, so it reads differently from a routine removal.
+    assert "parse" in out.lower()
+    assert "75%" in out
+    assert store.articles.count() == 4, "a mass removal must not commit on a bare 'y'"
+
+
+def test_run_commits_a_mass_removal_when_the_count_is_typed(tmp_path, monkeypatch):
+    store = Store(data_dir=tmp_path)
+    store.reset()
+    for name in ("Bunyip", "Yowie", "Champ", "Selma"):
+        _seed_cryptid(store, name, f"The {name} lurks in swamps.")
+
+    _wikipedia_fakes(
+        monkeypatch,
+        taxonomy=[_bunyip_ref()],
+        articles_by_title={"Bunyip": _article("The Bunyip lurks in swamps.", title="Bunyip")},
+    )
+    answers = iter(["3"])
+    monkeypatch.setattr("builtins.input", lambda *a: next(answers))
+
+    update.run(store=store, embedder=FakeEmbedder())
+
+    assert store.articles.count() == 1
+    assert store.get_article("Bunyip") is not None

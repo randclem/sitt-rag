@@ -24,6 +24,13 @@ Runs incrementally: the taxonomy is diffed against what's stored, only added/cha
 cryptids are refetched and re-embedded, and a `[y/N]` dry-run summary precedes any write.
 Pass `--eval` to score retrieval quality straight after the update.
 
+Two guards stand between a Wikipedia markup change and data loss. A taxonomy that
+parses to **zero** cryptids is treated as a parse failure and aborts the run — the
+list page having genuinely emptied is not a state worth modelling. A removal set
+above `MASS_REMOVAL_FRACTION` (25%) of the stored corpus replaces the routine
+`[y/N]` with a prompt that names parse failure as the likely cause and requires
+typing the number of cryptids to delete.
+
 ## Run the MCP server
 
 ```bash

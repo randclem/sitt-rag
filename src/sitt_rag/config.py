@@ -19,6 +19,11 @@ GOLDEN_QUERIES_PATH = Path(
     os.environ.get("SITT_RAG_GOLDEN_QUERIES", Path(__file__).resolve().parents[2] / "golden_queries.json")
 )
 
+# Removing more than this fraction of the stored corpus in one run demands an
+# explicit typed confirmation: past this point a mass removal is more likely a
+# taxonomy parse failure than a genuine delisting.
+MASS_REMOVAL_FRACTION = 0.25
+
 CHUNK_TOKEN_BUDGET = 500
 CHUNK_OVERLAP_PARAGRAPHS = 1
 

@@ -131,6 +131,16 @@ def fetch_taxonomy() -> list[CryptidRef]:
             display_name = link.get_text(strip=True)
             wikipedia_title = link.get("title") or display_name
             refs.append(CryptidRef(name=display_name, category=category, wikipedia_title=wikipedia_title))
+
+    if not refs:
+        # A 200 that parses to nothing means the markup moved, not that cryptids
+        # were delisted. Callers diff this against the store and read absences as
+        # deletions, so an empty list here must never look like a successful read.
+        raise WikipediaError(
+            "the cryptid taxonomy parsed to no cryptids — the 'List of cryptids' page "
+            "structure has probably changed; the page fetched fine (HTTP 200) but no "
+            "category tables were recognised"
+        )
     return refs
 
 
