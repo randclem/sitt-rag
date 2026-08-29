@@ -89,8 +89,9 @@ def _get(url: str, params: dict | None = None) -> requests.Response:
 def fetch_taxonomy() -> list[CryptidRef]:
     """Fetch the "List of cryptids" page and return every (name, category) entry.
 
-    Categories are the h3 headings under the "List" section; each category's table
-    has a "Name" column whose first cell links to the cryptid's own article.
+    Categories are the h3 headings under the "List" section; each category's tables
+    have a "Name" column whose first cell links to the cryptid's own article. A single
+    category can span several tables — the live "Terrestrial" section does.
     """
     try:
         resp = _get(f"{WIKIPEDIA_ORIGIN}/api/rest_v1/page/html/{LIST_OF_CRYPTIDS_TITLE}")
@@ -100,13 +101,24 @@ def fetch_taxonomy() -> list[CryptidRef]:
     soup = BeautifulSoup(resp.text, "lxml")
 
     refs: list[CryptidRef] = []
-    for h3 in soup.find_all("h3"):
-        category = h3.get_text(strip=True)
-        table = h3.find_next("table")
-        if table is None:
+    category: str | None = None
+
+    # Walk headings and tables in document order rather than taking each h3's single
+    # `find_next("table")`: a category's rows can span several tables, and taking only
+    # the first silently drops the rest — a partial parse that looks like a clean run.
+    # A category runs until the next h2, which is what keeps the sidebar table above
+    # the first category and the navboxes below "External links" out of the taxonomy.
+    for node in soup.find_all(["h2", "h3", "table"]):
+        if node.name == "h2":
+            category = None
             continue
-        rows = table.find_all("tr")[1:]
-        for row in rows:
+        if node.name == "h3":
+            category = node.get_text(strip=True)
+            continue
+        if category is None or node.find_parent("table") is not None:
+            continue
+
+        for row in node.find_all("tr")[1:]:
             cells = row.find_all("td")
             if not cells:
                 continue
