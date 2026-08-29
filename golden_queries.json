@@ -1,6 +1,18 @@
 {
   "mechanical": [
     {
+      "query": "Tell me about Almas",
+      "expected": [
+        "Almas"
+      ]
+    },
+    {
+      "query": "Tell me about Amomongo",
+      "expected": [
+        "Amomongo"
+      ]
+    },
+    {
       "query": "Tell me about Anguila peluda",
       "expected": [
         "Anguila peluda"
@@ -13,9 +25,21 @@
       ]
     },
     {
+      "query": "Tell me about Bigfoot",
+      "expected": [
+        "Bigfoot"
+      ]
+    },
+    {
       "query": "Tell me about British big cats",
       "expected": [
         "British big cats"
+      ]
+    },
+    {
+      "query": "Tell me about Bukit Timah Monkey Man",
+      "expected": [
+        "Bukit Timah Monkey Man"
       ]
     },
     {
@@ -34,6 +58,18 @@
       "query": "Tell me about Champ",
       "expected": [
         "Champ"
+      ]
+    },
+    {
+      "query": "Tell me about Chatawa Monster",
+      "expected": [
+        "Chatawa Monster"
+      ]
+    },
+    {
+      "query": "Tell me about Chuchunya",
+      "expected": [
+        "Chuchunya"
       ]
     },
     {
@@ -67,9 +103,21 @@
       ]
     },
     {
+      "query": "Tell me about Fouke Monster",
+      "expected": [
+        "Fouke Monster"
+      ]
+    },
+    {
       "query": "Tell me about Fresno nightcrawler",
       "expected": [
         "Fresno nightcrawler"
+      ]
+    },
+    {
+      "query": "Tell me about Giant",
+      "expected": [
+        "Giant"
       ]
     },
     {
@@ -94,6 +142,18 @@
       "query": "Tell me about Ground Shark",
       "expected": [
         "Ground Shark"
+      ]
+    },
+    {
+      "query": "Tell me about Homo floresiensis (Surviving Populations)",
+      "expected": [
+        "Homo floresiensis (Surviving Populations)"
+      ]
+    },
+    {
+      "query": "Tell me about Honey Island Swamp monster",
+      "expected": [
+        "Honey Island Swamp monster"
       ]
     },
     {
@@ -154,6 +214,12 @@
       "query": "Tell me about Manipogo",
       "expected": [
         "Manipogo"
+      ]
+    },
+    {
+      "query": "Tell me about Mapinguari",
+      "expected": [
+        "Mapinguari"
       ]
     },
     {
@@ -223,9 +289,21 @@
       ]
     },
     {
+      "query": "Tell me about Nittaewo",
+      "expected": [
+        "Nittaewo"
+      ]
+    },
+    {
       "query": "Tell me about Ogopogo",
       "expected": [
         "Ogopogo"
+      ]
+    },
+    {
+      "query": "Tell me about Orang Pendek",
+      "expected": [
+        "Orang Pendek"
       ]
     },
     {
@@ -253,6 +331,12 @@
       ]
     },
     {
+      "query": "Tell me about Skunk ape",
+      "expected": [
+        "Skunk ape"
+      ]
+    },
+    {
       "query": "Tell me about Steller's sea ape",
       "expected": [
         "Steller's sea ape"
@@ -268,6 +352,24 @@
       "query": "Tell me about Thylacine (surviving original populations)",
       "expected": [
         "Thylacine (surviving original populations)"
+      ]
+    },
+    {
+      "query": "Tell me about Yeren",
+      "expected": [
+        "Yeren"
+      ]
+    },
+    {
+      "query": "Tell me about Yeti",
+      "expected": [
+        "Yeti"
+      ]
+    },
+    {
+      "query": "Tell me about Yowie",
+      "expected": [
+        "Yowie"
       ]
     }
   ],
