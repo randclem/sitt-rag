@@ -24,6 +24,46 @@ LIST_HTML = """
 </body></html>
 """
 
+# Mirrors the live "List of cryptids" shape: a sidebar table before the first
+# category, a category whose rows span two tables (Terrestrial does, on the real
+# page), and navbox tables — top-level and nested — after "External links".
+SPLIT_TABLE_LIST_HTML = """
+<html><body>
+<table class="sidebar">
+<tr><td><a href="./Cryptozoology" title="Cryptozoology">Cryptozoology</a></td></tr>
+</table>
+<h2>List</h2>
+<h3>Aquatic or semi-aquatic</h3>
+<table class="wikitable">
+<tr><th>Name</th></tr>
+<tr><td><a href="./Bunyip" title="Bunyip">Bunyip</a></td></tr>
+</table>
+<h3>Terrestrial</h3>
+<table class="wikitable">
+<tr><th>Name</th></tr>
+<tr><td><a href="./Chupacabra" title="Chupacabra">Chupacabra</a></td></tr>
+</table>
+<table class="wikitable">
+<tr><th>Name</th></tr>
+<tr><td><a href="./Bigfoot" title="Bigfoot">Bigfoot</a></td></tr>
+<tr><td><a href="./Almas" title="Almas (folklore)">Almas</a></td></tr>
+</table>
+<h3>Flying</h3>
+<table class="wikitable">
+<tr><th>Name</th></tr>
+<tr><td><a href="./Mothman" title="Mothman">Mothman</a></td></tr>
+</table>
+<h2>External links</h2>
+<table class="navbox-inner">
+<tr><td><a href="./Folklore" title="Folklore">Folklore</a></td>
+<td><table class="navbox-subgroup">
+<tr><td><a href="./Myth" title="Myth">Myth</a></td></tr>
+</table></td></tr>
+</table>
+</body></html>
+"""
+
+
 ARTICLE_HTML = """
 <html><body>
 <section data-mw-section-id="0">
@@ -119,6 +159,35 @@ def test_fetch_taxonomy_parses_categories_and_skips_redlinks(monkeypatch):
         ("Katanga Snake", "Aquatic or semi-aquatic", "Remy Van Lierde"),
         ("Yeti", "Terrestrial", "Yeti"),
     ]
+
+
+def test_fetch_taxonomy_collects_every_table_of_a_category_split_across_tables(monkeypatch):
+    """The live Terrestrial category spans two tables; only reading the first silently
+    drops 17 of 62 cryptids, and the shortened taxonomy looks internally consistent."""
+    monkeypatch.setattr(wikipedia.requests, "get", lambda *a, **k: FakeResponse(text=SPLIT_TABLE_LIST_HTML))
+
+    refs = fetch_taxonomy()
+
+    terrestrial = [r.name for r in refs if r.category == "Terrestrial"]
+    assert terrestrial == ["Chupacabra", "Bigfoot", "Almas"]
+    assert [(r.name, r.category) for r in refs] == [
+        ("Bunyip", "Aquatic or semi-aquatic"),
+        ("Chupacabra", "Terrestrial"),
+        ("Bigfoot", "Terrestrial"),
+        ("Almas", "Terrestrial"),
+        ("Mothman", "Flying"),
+    ]
+
+
+def test_fetch_taxonomy_excludes_sidebar_and_navbox_tables(monkeypatch):
+    monkeypatch.setattr(wikipedia.requests, "get", lambda *a, **k: FakeResponse(text=SPLIT_TABLE_LIST_HTML))
+
+    names = {r.name for r in fetch_taxonomy()}
+
+    # Before the first category heading, and after the categories end at an h2.
+    assert "Cryptozoology" not in names
+    assert "Folklore" not in names
+    assert "Myth" not in names
 
 
 def test_fetch_article_keeps_prose_drops_boilerplate_and_citations(monkeypatch):
