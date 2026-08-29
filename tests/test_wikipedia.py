@@ -179,6 +179,19 @@ def test_fetch_taxonomy_collects_every_table_of_a_category_split_across_tables(m
     ]
 
 
+def test_fetch_taxonomy_raises_when_the_page_structure_yields_no_entries(monkeypatch):
+    """A restructured list page (or a soft-error page under a 200) parses to nothing.
+
+    That must be distinguishable from "there are genuinely no cryptids", because the
+    caller diffs the result against the store and treats absences as deletions.
+    """
+    restructured = "<html><body><h2>List</h2><h4>Aquatic</h4><p>Now behind a template.</p></body></html>"
+    monkeypatch.setattr(wikipedia.requests, "get", lambda *a, **k: FakeResponse(text=restructured))
+
+    with pytest.raises(WikipediaError, match="no cryptids"):
+        fetch_taxonomy()
+
+
 def test_fetch_taxonomy_excludes_sidebar_and_navbox_tables(monkeypatch):
     monkeypatch.setattr(wikipedia.requests, "get", lambda *a, **k: FakeResponse(text=SPLIT_TABLE_LIST_HTML))
 

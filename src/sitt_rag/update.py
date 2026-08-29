@@ -17,7 +17,7 @@ import sys
 from dataclasses import dataclass
 
 from sitt_rag.chunking import chunk_article
-from sitt_rag.config import CC_BY_SA_LICENSE, WIKIPEDIA_ORIGIN
+from sitt_rag.config import CC_BY_SA_LICENSE, MASS_REMOVAL_FRACTION, WIKIPEDIA_ORIGIN
 from sitt_rag.embeddings import EmbeddingError, VoyageEmbedder
 from sitt_rag.eval import EvalError
 from sitt_rag.store import Source, Store
@@ -96,6 +96,24 @@ def _insert(store: Store, embedder: VoyageEmbedder, fetched: _Fetched) -> None:
     )
 
 
+def _confirm_mass_removal(removed: list[str], stored_count: int) -> bool:
+    """Gate a removal set large enough to look like a parse failure.
+
+    #21 showed the shape this takes in practice: a partial parse that resembles a
+    clean run, where the missing rows read as deletions. A plain [y/N] is the same
+    keystroke as a routine run, so this asks for the count instead — a deliberate
+    act rather than a reflex.
+    """
+    fraction = len(removed) / stored_count
+    print(f"\n!!! {len(removed)} of {stored_count} stored cryptids ({fraction:.0%}) are missing from the taxonomy.")
+    print("    A removal this large usually means the 'List of cryptids' page failed to")
+    print("    parse correctly, not that the cryptids were delisted. Check the live page")
+    print("    and the Added/Changed counts above before continuing.")
+    print("    Re-ingesting costs a fresh embedding for every cryptid removed.")
+    answer = input(f"\nType the number of cryptids to delete ({len(removed)}) to confirm, or anything else to abort: ")
+    return answer.strip() == str(len(removed))
+
+
 def _print_bucket(label: str, names: list[str]) -> None:
     print(f"{label}: {len(names)}")
     for name in names:
@@ -118,6 +136,13 @@ def run(store: Store | None = None, embedder: VoyageEmbedder | None = None) -> b
 
     print("Fetching taxonomy...")
     taxonomy = fetch_taxonomy()
+    if not taxonomy:
+        # `fetch_taxonomy` guards this at the source; re-checking here keeps the
+        # delete path unreachable even if that guard is bypassed or regresses.
+        raise WikipediaError(
+            "the cryptid taxonomy is empty — refusing to diff the store against no cryptids, "
+            "which would propose deleting the entire corpus"
+        )
     taxonomy_by_name = {ref.name: ref for ref in taxonomy}
     taxonomy_names = set(taxonomy_by_name)
 
@@ -160,11 +185,17 @@ def run(store: Store | None = None, embedder: VoyageEmbedder | None = None) -> b
         _report_failures(failures)
         return True
 
-    answer = input("\nProceed? [y/N] ").strip().lower()
-    if answer != "y":
-        print("Aborted.")
-        _report_failures(failures)
-        return False
+    if removed_names and len(removed_names) / len(stored_names) > MASS_REMOVAL_FRACTION:
+        if not _confirm_mass_removal(removed_names, len(stored_names)):
+            print("Aborted — nothing was deleted.")
+            _report_failures(failures)
+            return False
+    else:
+        answer = input("\nProceed? [y/N] ").strip().lower()
+        if answer != "y":
+            print("Aborted.")
+            _report_failures(failures)
+            return False
 
     for name in added_names + changed_names:
         _insert(store, embedder, fetched_by_name[name])
@@ -199,9 +230,9 @@ def main(argv: list[str] | None = None) -> None:
             run_eval()
     except (EmbeddingError, WikipediaError, EvalError) as exc:
         # Per-cryptid fetch failures are absorbed into the failed bucket; a
-        # WikipediaError reaching here means the taxonomy itself is unreachable,
-        # so there's nothing to diff against. An EvalError means --eval couldn't
-        # read its golden set — the ingest above still stands.
+        # WikipediaError reaching here means the taxonomy itself is unreachable
+        # or unparseable, so there's nothing safe to diff against. An EvalError
+        # means --eval couldn't read its golden set — the ingest above still stands.
         print(f"error: {exc}", file=sys.stderr)
         sys.exit(1)
 
