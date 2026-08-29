@@ -6,11 +6,12 @@ A cryptid whose article can't be fetched or parsed lands in a `failed` bucket
 instead of aborting the run: it's excluded from this run's commit, its existing
 rows are left in place, and it reappears in the same bucket on the next run.
 
-Usage: python -m sitt_rag.update
+Usage: python -m sitt_rag.update [--eval]
 """
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import sys
 from dataclasses import dataclass
@@ -18,6 +19,7 @@ from dataclasses import dataclass
 from sitt_rag.chunking import chunk_article
 from sitt_rag.config import CC_BY_SA_LICENSE, WIKIPEDIA_ORIGIN
 from sitt_rag.embeddings import EmbeddingError, VoyageEmbedder
+from sitt_rag.eval import EvalError
 from sitt_rag.store import Source, Store
 from sitt_rag.wikipedia import Article, CryptidRef, WikipediaError, fetch_article, fetch_redirects, fetch_taxonomy
 
@@ -109,7 +111,8 @@ def _report_failures(failures: list[_Failure]) -> None:
         print(f"  {failure.cryptid_name} ({failure.url}): {failure.error}")
 
 
-def run(store: Store | None = None, embedder: VoyageEmbedder | None = None) -> None:
+def run(store: Store | None = None, embedder: VoyageEmbedder | None = None) -> bool:
+    """Diff, fetch and (on confirmation) commit. Returns False if the user declined."""
     store = store or Store()
     embedder = embedder or VoyageEmbedder()
 
@@ -155,13 +158,13 @@ def run(store: Store | None = None, embedder: VoyageEmbedder | None = None) -> N
     if not added_names and not changed_names and not removed_names:
         print("\nNothing to do.")
         _report_failures(failures)
-        return
+        return True
 
     answer = input("\nProceed? [y/N] ").strip().lower()
     if answer != "y":
         print("Aborted.")
         _report_failures(failures)
-        return
+        return False
 
     for name in added_names + changed_names:
         _insert(store, embedder, fetched_by_name[name])
@@ -170,15 +173,35 @@ def run(store: Store | None = None, embedder: VoyageEmbedder | None = None) -> N
 
     print(f"Done. {len(added_names)} added, {len(changed_names)} changed, {len(removed_names)} removed.")
     _report_failures(failures)
+    return True
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        prog="python -m sitt_rag.update",
+        description="Diff the cryptid taxonomy against the store and ingest what changed.",
+    )
+    parser.add_argument(
+        "--eval",
+        action="store_true",
+        help="after updating, score search_cryptid_lore's Recall@5 against the golden query set",
+    )
+    args = parser.parse_args(argv)
+
     try:
-        run()
-    except (EmbeddingError, WikipediaError) as exc:
+        committed = run()
+        # Declining the [y/N] prompt means "stop" — don't then spend a Voyage
+        # query embedding per golden query scoring a store the user left alone.
+        if args.eval and committed:
+            from sitt_rag.eval import run as run_eval
+
+            print()
+            run_eval()
+    except (EmbeddingError, WikipediaError, EvalError) as exc:
         # Per-cryptid fetch failures are absorbed into the failed bucket; a
         # WikipediaError reaching here means the taxonomy itself is unreachable,
-        # so there's nothing to diff against.
+        # so there's nothing to diff against. An EvalError means --eval couldn't
+        # read its golden set — the ingest above still stands.
         print(f"error: {exc}", file=sys.stderr)
         sys.exit(1)
 
