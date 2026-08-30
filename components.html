@@ -1,0 +1,458 @@
+<title>Something in the Trees</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    --bg: #F3F4EE;
+    --surface: #FDFDFB;
+    --paper: #FBFAF5;      /* fixed "field notes" ground for the diagram card, same in both themes */
+    --ink: #22271D;
+    --ink-muted: #5B6357;
+    --ink-faint: #868F7D;
+    --line: #DBDED2;
+    --line-strong: #C3C8B7;
+    --accent: #3F6B4F;      /* moss */
+    --accent-ink: #F3F4EE;
+    --accent-2: #8B5E3C;    /* bark */
+    --chip-bg: #EDEFE5;
+
+    --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+    --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14170F;
+      --surface: #1B1F16;
+      --ink: #E7E9DC;
+      --ink-muted: #A5AC97;
+      --ink-faint: #77806C;
+      --line: #2C3123;
+      --line-strong: #3A4130;
+      --accent: #7FB48B;
+      --accent-ink: #12160D;
+      --accent-2: #D0996B;
+      --chip-bg: #212617;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #14170F;
+    --surface: #1B1F16;
+    --ink: #E7E9DC;
+    --ink-muted: #A5AC97;
+    --ink-faint: #77806C;
+    --line: #2C3123;
+    --line-strong: #3A4130;
+    --accent: #7FB48B;
+    --accent-ink: #12160D;
+    --accent-2: #D0996B;
+    --chip-bg: #212617;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height: 1.55;
+    margin: 0;
+    padding: 3.5rem 1.5rem 5rem;
+  }
+
+  main {
+    max-width: 62rem;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2.75rem;
+  }
+
+  header.masthead {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+  }
+
+  .eyebrow::before {
+    content: "";
+    display: inline-block;
+    width: 0.55em;
+    height: 0.55em;
+    border-radius: 1px;
+    background: var(--accent);
+    transform: rotate(45deg);
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(2.1rem, 4.4vw, 3rem);
+    letter-spacing: -0.01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .dek {
+    font-size: 1.05rem;
+    color: var(--ink-muted);
+    max-width: 46rem;
+    margin: 0;
+  }
+
+  .dek code {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    background: var(--chip-bg);
+    padding: 0.08em 0.4em;
+    border-radius: 3px;
+  }
+
+  section h2 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.35rem;
+    margin: 0 0 1rem;
+    letter-spacing: -0.005em;
+  }
+
+  /* ---- Diagram card ---- */
+
+  figure.diagram {
+    margin: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+
+  .diagram-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 1.25rem;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .diagram-body {
+    /* Fixed light "paper" ground, independent of page theme — the mermaid
+       nodes below are authored with self-contained fills for contrast, so
+       this card always reads correctly regardless of viewer theme. */
+    background: var(--paper);
+    padding: 1.5rem 1rem 1rem;
+    overflow-x: auto;
+  }
+
+  .diagram-body pre.mermaid {
+    margin: 0;
+    min-width: 640px;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.1rem 1.6rem;
+    padding: 0.9rem 1.25rem 1.1rem;
+    background: var(--paper);
+    border-top: 1px dashed var(--line-strong);
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: #3A4030;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+  }
+
+  .swatch {
+    width: 0.85em;
+    height: 0.85em;
+    border-radius: 2px;
+    display: inline-block;
+    flex: none;
+  }
+
+  figcaption {
+    padding: 0.95rem 1.25rem 1.1rem;
+    font-size: 0.92rem;
+    color: var(--ink-muted);
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  /* ---- Module reference ---- */
+
+  .modules {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+    gap: 1.5rem;
+  }
+
+  .module-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .module-group h3 {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  dl.mod-list {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+
+  dl.mod-list > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  dl.mod-list dt {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  dl.mod-list dd {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--ink-muted);
+  }
+
+  /* ---- Footer ---- */
+
+  footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .chip {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.03em;
+    padding: 0.28em 0.65em;
+    background: var(--chip-bg);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    color: var(--ink-muted);
+  }
+
+  .data-note {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+  }
+
+  @media (max-width: 30rem) {
+    body { padding: 2.25rem 1rem 3.5rem; }
+  }
+</style>
+
+<main>
+  <header class="masthead">
+    <div class="eyebrow">MCP server &middot; component map</div>
+    <h1>Something in the Trees</h1>
+    <p class="dek">
+      A local-first RAG server over Wikipedia's cryptid taxonomy: a batch
+      <code>update.py</code> pipeline fetches, chunks, and embeds articles into
+      ChromaDB, and a separate <code>server.py</code> process exposes that store
+      to MCP clients as four read-only tools.
+    </p>
+  </header>
+
+  <section aria-labelledby="diagram-heading">
+    <h2 id="diagram-heading">Component map</h2>
+    <figure class="diagram">
+      <div class="diagram-head">
+        <span>src/sitt_rag</span>
+        <span>flowchart · offline ingest vs. online serving</span>
+      </div>
+      <div class="diagram-body">
+<pre class="mermaid">
+%%{init: {"theme": "base", "themeVariables": {
+  "fontFamily": "IBM Plex Mono, monospace",
+  "fontSize": "13px",
+  "primaryColor": "#EDEFE5",
+  "primaryTextColor": "#22271D",
+  "primaryBorderColor": "#8A8F79",
+  "lineColor": "#6B7360",
+  "edgeLabelBackground": "#FBFAF5"
+}}}%%
+flowchart TB
+  CLIENT["MCP client<br/>(Claude, etc.)"]
+
+  subgraph ING["INGEST · python -m sitt_rag.update"]
+    direction TB
+    UPDATE["update.py<br/>run(): diff taxonomy vs. store,<br/>confirm, commit"]
+    WIKIMOD["wikipedia.py<br/>fetch_taxonomy / fetch_article /<br/>fetch_redirects"]
+    CHUNK["chunking.py<br/>chunk_article()"]
+  end
+
+  subgraph SRV["SERVING · python -m sitt_rag.server"]
+    direction TB
+    SERVER["server.py<br/>search_cryptid_lore · get_cryptid<br/>list_categories · list_cryptids"]
+  end
+
+  subgraph SHARED["SHARED"]
+    direction TB
+    EMBED["embeddings.py<br/>VoyageEmbedder"]
+    STORE["store.py<br/>Store"]
+    CONFIG["config.py"]
+  end
+
+  WIKI[("Wikipedia<br/>REST + Action API")]
+  VOYAGE[("Voyage AI<br/>voyage-4")]
+  DATA[("ChromaDB · data/<br/>chunks + articles")]
+
+  CLIENT -->|"tool call"| SERVER
+  SERVER -->|"embed_query(query)"| EMBED
+  SERVER -->|"search / get_article /<br/>list_categories / list_cryptids"| STORE
+
+  UPDATE -->|"fetch taxonomy + articles"| WIKIMOD
+  WIKIMOD -->|"GET, retry on 429/5xx"| WIKI
+  UPDATE -->|"chunk_article(article)"| CHUNK
+  UPDATE -->|"embed_documents(chunks)"| EMBED
+  UPDATE -->|"add_chunks / add_article /<br/>delete_cryptid"| STORE
+
+  EMBED -->|"embed()"| VOYAGE
+  STORE -->|"persist"| DATA
+
+  CONFIG -.->|"env vars, paths,<br/>chunk budget"| UPDATE
+  CONFIG -.->|"env vars, paths"| SERVER
+
+  classDef external fill:#E4E9EF,stroke:#4C5A6B,color:#1B2430,stroke-width:1px;
+  classDef ingest fill:#E6EEE1,stroke:#3F6B4F,color:#20261C,stroke-width:1px;
+  classDef runtime fill:#F3E7D9,stroke:#8B5E3C,color:#2B2013,stroke-width:1px;
+  classDef shared fill:#EEECE1,stroke:#8A8F79,color:#23271A,stroke-width:1px;
+  classDef data fill:#D7E4D9,stroke:#2F4A38,color:#152016,stroke-width:1.5px;
+  classDef client fill:#F3E7D9,stroke:#8B5E3C,color:#2B2013,stroke-width:1px;
+
+  class CLIENT client;
+  class UPDATE,WIKIMOD,CHUNK ingest;
+  class SERVER runtime;
+  class EMBED,STORE,CONFIG shared;
+  class WIKI,VOYAGE external;
+  class DATA data;
+</pre>
+      </div>
+      <div class="legend">
+        <span class="legend-item"><span class="swatch" style="background:#F3E7D9;border:1px solid #8B5E3C"></span>Runtime / client</span>
+        <span class="legend-item"><span class="swatch" style="background:#E6EEE1;border:1px solid #3F6B4F"></span>Ingest pipeline</span>
+        <span class="legend-item"><span class="swatch" style="background:#EEECE1;border:1px solid #8A8F79"></span>Shared module</span>
+        <span class="legend-item"><span class="swatch" style="background:#E4E9EF;border:1px solid #4C5A6B"></span>External API</span>
+        <span class="legend-item"><span class="swatch" style="background:#D7E4D9;border:1px solid #2F4A38"></span>Persisted store</span>
+      </div>
+      <figcaption>
+        Two independent entry points share the same storage and embedding
+        code: <strong>update.py</strong> runs offline to rebuild the corpus,
+        while <strong>server.py</strong> runs long-lived and only ever reads
+        from it. Dashed arrows are configuration, not data flow.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section aria-labelledby="modules-heading">
+    <h2 id="modules-heading">Module reference</h2>
+    <div class="modules">
+      <div class="module-group">
+        <h3>Ingest</h3>
+        <dl class="mod-list">
+          <div>
+            <dt>update.py</dt>
+            <dd>Orchestrates a full diff-and-confirm ingest run: added / changed / removed / unchanged / failed buckets, then a <code style="font-family:var(--font-mono)">[y/N]</code> commit.</dd>
+          </div>
+          <div>
+            <dt>wikipedia.py</dt>
+            <dd>Fetches the taxonomy and article HTML, with retry/backoff on transient (429/5xx) errors only.</dd>
+          </div>
+          <div>
+            <dt>chunking.py</dt>
+            <dd>Splits article sections into token-budgeted chunks with one paragraph of overlap, via tiktoken.</dd>
+          </div>
+        </dl>
+      </div>
+      <div class="module-group">
+        <h3>Serving</h3>
+        <dl class="mod-list">
+          <div>
+            <dt>server.py</dt>
+            <dd>MCP server exposing four tools, all returning <code style="font-family:var(--font-mono)">{"error": {...}}</code> instead of raising.</dd>
+          </div>
+        </dl>
+        <h3 style="margin-top: 0.4rem;">Shared</h3>
+        <dl class="mod-list">
+          <div>
+            <dt>embeddings.py</dt>
+            <dd>Thin Voyage AI client wrapper — <code style="font-family:var(--font-mono)">embed_documents</code> for ingest, <code style="font-family:var(--font-mono)">embed_query</code> for search.</dd>
+          </div>
+          <div>
+            <dt>store.py</dt>
+            <dd>ChromaDB access: <code style="font-family:var(--font-mono)">chunks</code> (embedded, searched) and <code style="font-family:var(--font-mono)">articles</code> (full text) collections.</dd>
+          </div>
+          <div>
+            <dt>config.py</dt>
+            <dd>Env vars, data dir, chunk budget, and the Voyage model name — read once at import.</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="stack">
+      <span class="chip">python 3.11+</span>
+      <span class="chip">mcp</span>
+      <span class="chip">chromadb</span>
+      <span class="chip">voyageai</span>
+      <span class="chip">tiktoken</span>
+      <span class="chip">requests + bs4</span>
+    </div>
+    <div class="data-note">data/ · chroma.sqlite3 + hnsw index</div>
+  </footer>
+</main>
